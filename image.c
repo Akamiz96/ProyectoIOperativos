@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 //*****************************************************************
 //DEFINICION DE CONSTANTES DEL PROGRAMA
@@ -59,25 +60,25 @@ typedef struct BMP
 //*****************************************************************
 void abrir_imagen(BMP *imagen, char ruta[]);		//Función para abrir la imagen BMP
 void crear_imagen(BMP *imagen, char ruta[]);	//Función para crear una imagen BMP
-void convertir_imagen(BMP *imagen,int nhilos); //2 sera el numero de hilos
+void convertir_imagen(BMP *imagen); //2 sera el numero de hilos
 
 /*********************************************************************************************************
 //PROGRAMA PRINCIPAL
 //*********************************************************************************************************/
 int main (int argc, char* argv[])
 {
-  int i,j,k; 				//Variables auxiliares para loops
+  int i,j,k,rc; 				//Variables auxiliares para loops
 	BMP img;				//Estructura de tipo imágen
 	char IMAGEN[45];		//Almacenará la ruta de la imagen
-
+	pthread_t hilo;
 
 	//******************************************************************
 	//Si no se introdujo la ruta de la imagen BMP
 	//******************************************************************
 	//Si no se introduce una ruta de imágen
-	if (argc!=3)
+	if (argc!=5)
 	{
-		printf("\nIndique el nombre del archivo a codificar - Ejemplo: [user@equipo]$ %s imagen.bmp\n",argv[0]);
+		printf("\nError\nDebe ser ejecutado de la forma: %s [imagenIn].bmp [imagenOut].bmp [opcion] [nhilos] \n",argv[0]);
 		exit(1);
 	}
 	//Almacenar la ruta de la imágen
@@ -91,7 +92,8 @@ int main (int argc, char* argv[])
 	printf("\nIMAGEN: %s",IMAGEN);
 	printf("\n*************************************************************************");
 	printf("\nDimensiones de la imágen:\tAlto=%d\tAncho=%d\n",img.alto,img.ancho);
-	convertir_imagen(&img,2); //2 sera el numero de hilos
+	
+	rc = pthread_create(&hilo, NULL, (void *)convertir_imagen,(void*) &img); //2 sera el numero de hilos
 
 	//***************************************************************************************************************************
 	//1 Crear la imágen BMP a partir del arreglo img.pixel[][]
@@ -192,7 +194,7 @@ void abrir_imagen(BMP *imagen, char *ruta)
 //Parametro que devuelve: Ninguno
 //****************************************************************************************************************************************************
 
-void convertir_imagen(BMP *imagen,int nhilos){
+void convertir_imagen(BMP *imagen){
   int i,j,k;
 
   unsigned char temp;
