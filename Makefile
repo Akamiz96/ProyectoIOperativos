@@ -1,9 +1,12 @@
 
-imgconc: image.o
-	gcc -o imgconc image.o -lpthread
+imgconc: image.c BMP.exe BMP2.exe
+	gcc image.c -o imgconc -lpthread
 
-image.o: image.c
-	gcc -c image.c
+BMP.exe:
+	gcc BMP.c -o BMP.exe
+
+BMP2.exe:
+	gcc BMP2.c -o BMP2.exe
 
 clean:
-	rm *.o
+	rm imgconc
