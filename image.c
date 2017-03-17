@@ -30,7 +30,7 @@
 //DEFINICION DE CONSTANTES DEL PROGRAMA
 //*****************************************************************
 #define 	IMAGEN_TRATADA	"tratada.bmp"		//Ruta y nombre del archivo de la imagen de salida BMP
-
+int iterador = 0;
 //********************************************************************************
 //DECLARACION DE ESTRUCTURAS
 //********************************************************************************
@@ -60,17 +60,20 @@ typedef struct BMP
 //*****************************************************************
 void abrir_imagen(BMP *imagen, char ruta[]);		//Función para abrir la imagen BMP
 void crear_imagen(BMP *imagen, char ruta[]);	//Función para crear una imagen BMP
-void convertir_imagen(BMP *imagen); //2 sera el numero de hilos
+void convertir_imagen1(void *argv_convertir[]);
+void convertir_imagen2(void *argv_convertir[]);
+void convertir_imagen3(void *argv_convertir[]); //2 sera el numero de hilos
 
 /*********************************************************************************************************
 //PROGRAMA PRINCIPAL
 //*********************************************************************************************************/
 int main (int argc, char* argv[])
 {
-  int i,j,k,rc; 				//Variables auxiliares para loops
+  int i, j, k, rc, n_hilos, *hilo_id, opcion; 				//Variables auxiliares para loops
 	BMP img;				//Estructura de tipo imágen
 	char IMAGEN[45];		//Almacenará la ruta de la imagen
-	pthread_t hilo;
+	pthread_t *hilo;
+	void *argv_convertir[3];
 
 	//******************************************************************
 	//Si no se introdujo la ruta de la imagen BMP
@@ -83,18 +86,38 @@ int main (int argc, char* argv[])
 	}
 	//Almacenar la ruta de la imágen
 	strcpy(IMAGEN,argv[1]);
-
+	opcion = atoi( argv[3] );
+	n_hilos = atoi( argv[4] );
+	hilo_id = calloc( n_hilos, sizeof( int ) );
+	hilo = calloc( n_hilos, sizeof( pthread_t ) );
 	//***************************************************************************************************************************
 	//0 Abrir la imágen BMP de 24 bits, almacenar su cabecera en la estructura img y colocar sus pixeles en el arreglo img.pixel[][]
 	//***************************************************************************************************************************
 	abrir_imagen(&img,IMAGEN);
+	argv_convertir[0] = &img;
+	argv_convertir[1] = &n_hilos;
 	printf("\n*************************************************************************");
 	printf("\nIMAGEN: %s",IMAGEN);
 	printf("\n*************************************************************************");
 	printf("\nDimensiones de la imágen:\tAlto=%d\tAncho=%d\n",img.alto,img.ancho);
-	
-	rc = pthread_create(&hilo, NULL, (void *)convertir_imagen,(void*) &img); //2 sera el numero de hilos
+	for( i = 1; i <= n_hilos; i++ )
+	{
+		hilo_id[i - 1] = i;
+		argv_convertir[2] = hilo_id;
+		switch (opcion) {
+			case 1:
+				rc = pthread_create(&hilo[i - 1], NULL, (void *)convertir_imagen1, argv_convertir); //2 sera el numero de hilos
+				break;
+			case 2:
+				rc = pthread_create(&hilo[i - 1], NULL, (void *)convertir_imagen2, argv_convertir); //2 sera el numero de hilos
+				break;
+			case 3:
+				rc = pthread_create(&hilo[i - 1], NULL, (void *)convertir_imagen3, argv_convertir); //2 sera el numero de hilos
+				break;
 
+		}
+
+	}
 	//***************************************************************************************************************************
 	//1 Crear la imágen BMP a partir del arreglo img.pixel[][]
 	//***************************************************************************************************************************
@@ -102,7 +125,12 @@ int main (int argc, char* argv[])
 	printf("\nImágen BMP tratada en el archivo: %s\n",IMAGEN_TRATADA);
 
 	//Terminar programa normalmente
-	exit (0);
+	free(hilo_id);
+	for( i = 0; i < n_hilos; i++ )
+	{
+		pthread_join( hilo[ i ], NULL );
+	}
+	pthread_exit(0);
 }
 
 //************************************************************************
@@ -193,18 +221,69 @@ void abrir_imagen(BMP *imagen, char *ruta)
 //Parametros de entrada: Referencia a un BMP (Estructura BMP), Referencia a la cadena ruta char ruta[]=char *ruta
 //Parametro que devuelve: Ninguno
 //****************************************************************************************************************************************************
-
-void convertir_imagen(BMP *imagen){
-  int i,j,k;
-
+void convertir_imagen1(void *argv_convertir[])
+{
+	int i,j,k, alto = 0, ancho = 0, *n_hilos, hilo_id;
+	BMP *imagen;
   unsigned char temp;
 
-   for (i=0;i<imagen->alto;i++) {
-		for (j=0;j<imagen->ancho;j++) {
-		  for (k=0;k<3;k++)
+	imagen = (BMP*) (argv_convertir[0]);
+	n_hilos = (int*) (argv_convertir[1]);
+	hilo_id = ( (int*) (argv_convertir[2]) )[iterador];
+	iterador++;
+	ancho = ( ( imagen->ancho ) / *n_hilos ) * hilo_id;
+	for (i = 0;i<imagen->alto;i++) {
+		j = ( ( imagen->ancho ) / *n_hilos ) * ( hilo_id - 1 );
+		for (;j<ancho;j++) {
+			for (k=0;k<3;k++)
+        imagen->pixel[i][j][k]=(imagen->pixel[i][j][2]*0.3)+(imagen->pixel[i][j][1]*0.59)+ (imagen->pixel[i][j][0]*0.11);
+		}
+  }
+	printf("termino hilo: %d\n", hilo_id);
+	pthread_exit(NULL);
+}
+
+void convertir_imagen2(void *argv_convertir[])
+{
+	int i,j,k, alto = 0, ancho = 0, *n_hilos, hilo_id;
+	BMP *imagen;
+  unsigned char temp;
+
+	imagen = (BMP*) (argv_convertir[0]);
+	n_hilos = (int*) (argv_convertir[1]);
+	hilo_id = ( (int*) (argv_convertir[2]) )[iterador];
+	iterador++;
+	ancho = ( ( imagen->ancho ) / *n_hilos ) * hilo_id;
+	for (i = 0;i<imagen->alto;i++) {
+		j = ( ( imagen->ancho ) / *n_hilos ) * ( hilo_id - 1 );
+		for (;j<ancho;j++) {
+			for (k=0;k<3;k++)
+        imagen->pixel[i][j][k]=((imagen->pixel[i][j][2]+imagen->pixel[i][j][1] + imagen->pixel[i][j][0]))/3;
+		}
+  }
+	printf("termino hilo: %d\n", hilo_id);
+	pthread_exit(NULL);
+}
+
+void convertir_imagen3(void *argv_convertir[]){
+  int i,j,k, alto = 0, ancho = 0, *n_hilos, hilo_id;
+	BMP *imagen;
+  unsigned char temp;
+
+	imagen = (BMP*) (argv_convertir[0]);
+	n_hilos = (int*) (argv_convertir[1]);
+	hilo_id = ( (int*) (argv_convertir[2]) )[iterador];
+	iterador++;
+	ancho = ( ( imagen->ancho ) / *n_hilos ) * hilo_id;
+	for (i = 0;i<imagen->alto;i++) {
+		j = ( ( imagen->ancho ) / *n_hilos ) * ( hilo_id - 1 );
+		for (;j<ancho;j++) {
+			for (k=0;k<3;k++)
         imagen->pixel[i][j][k]= 255 - imagen->pixel[i][j][k];
-      }
-   }
+		}
+  }
+	printf("termino hilo: %d\n", hilo_id);
+	pthread_exit(NULL);
 }
 
 
