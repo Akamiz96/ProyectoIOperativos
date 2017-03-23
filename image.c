@@ -62,43 +62,39 @@ typedef struct Hilo
 //*****************************************************************
 //DECLARACIÓN DE FUNCIONES
 //*****************************************************************
-void abrir_imagen(BMP *imagen, char ruta[]);		//Función para abrir la imagen BMP
-void crear_imagen(BMP *imagen, char ruta[]);	//Función para crear una imagen BMP
-void convertir_imagen1(void *argv_convertir);
-void convertir_imagen2(void *argv_convertir);
-void convertir_imagen3(void *argv_convertir); //2 sera el numero de hilos
+void AbrirImagen(BMP *imagen, char ruta[]);		//Función para abrir la imagen BMP
+void CrearImagen(BMP *imagen, char ruta[]);		//Función para crear una imagen BMP
+void ConvertirImagen1(void *argv_convertir);	//Filtro de la escala de grises con formula
+void ConvertirImagen2(void *argv_convertir);	//Filtro de la escala de grises con promedio
+void ConvertirImagen3(void *argv_convertir); 	//Filtro del Negativo
 
 /*********************************************************************************************************
 //PROGRAMA PRINCIPAL
 //*********************************************************************************************************/
 int main (int argc, char* argv[])
 {
-  int i, j, k, rc, n_hilos, *hilo_id, opcion; 				//Variables auxiliares para loops
-	BMP img;				//Estructura de tipo imágen
+  int i, j, k, rc, n_hilos, *hilo_id, opcion;
+	BMP img;
 	char IMAGEN[45];		//Almacenará la ruta de la imagen
 	pthread_t *hilo;
 	Hilo *argv_convertir;
 
-	//******************************************************************
-	//Si no se introdujo la ruta de la imagen BMP
-	//******************************************************************
 	if (argc!=5)
-	//Si no se introduce una ruta de imágen
 	{
 		printf("\nError\nDebe ser ejecutado de la forma: %s [imagenIn].bmp [imagenOut].bmp [opcion] [nhilos] \n",argv[0]);
 		exit(1);
 	}
-	//Almacenar la ruta de la imágen
-	strcpy(IMAGEN,argv[1]);
-	opcion = atoi( argv[3] );
-	n_hilos = atoi( argv[4] );
-	hilo_id = calloc( n_hilos, sizeof( int ) );
-	hilo = calloc( n_hilos, sizeof( pthread_t ) );
-	argv_convertir = calloc( n_hilos, sizeof( Hilo ) );
+	//Inicializacion de variables
+	strcpy(IMAGEN,argv[1]); 		//Guarda la ruta de la imagen
+	opcion = atoi( argv[3] ); 	//Guarda el filtro a usar
+	n_hilos = atoi( argv[4] );	//Guarda el numero de hilos a usar
+	hilo_id = calloc( n_hilos, sizeof( int ) );		//Da memoria para el arreglo de ID auxiliares de hilos
+	hilo = calloc( n_hilos, sizeof( pthread_t ) );		//Da memoria para el arreglo de hilos
+	argv_convertir = calloc( n_hilos, sizeof( Hilo ) );		//Da memoria para el arreglo del parametro
 	//***************************************************************************************************************************
 	//0 Abrir la imágen BMP de 24 bits, almacenar su cabecera en la estructura img y colocar sus pixeles en el arreglo img.pixel[][]
 	//***************************************************************************************************************************
-	abrir_imagen(&img,IMAGEN);
+	AbrirImagen(&img,IMAGEN);
 	printf("\n*************************************************************************");
 	printf("\nIMAGEN: %s",IMAGEN);
 	printf("\n*************************************************************************");
@@ -111,7 +107,7 @@ int main (int argc, char* argv[])
 		argv_convertir[i - 1].hilo_id = hilo_id[i - 1];
 		switch (opcion) {
 			case 1:
-				rc = pthread_create(&hilo[i - 1], NULL, (void *)convertir_imagen1, (void *) &argv_convertir[i -1]); //2 sera el numero de hilos
+				rc = pthread_create(&hilo[i - 1], NULL, (void *)ConvertirImagen1, (void *) &argv_convertir[i -1]); //2 sera el numero de hilos
 				if( rc != 0 )
 				{
 					perror("pthread_create: ");
@@ -119,7 +115,7 @@ int main (int argc, char* argv[])
 				}
 				break;
 			case 2:
-				rc = pthread_create(&hilo[i - 1], NULL, (void *)convertir_imagen2, (void *) &argv_convertir[i -1]); //2 sera el numero de hilos
+				rc = pthread_create(&hilo[i - 1], NULL, (void *)ConvertirImagen2, (void *) &argv_convertir[i -1]); //2 sera el numero de hilos
 				if( rc != 0 )
 				{
 					perror("pthread_create: ");
@@ -127,7 +123,7 @@ int main (int argc, char* argv[])
 				}
 				break;
 			case 3:
-				rc = pthread_create(&hilo[i - 1], NULL, (void *)convertir_imagen3, (void *) &argv_convertir[i -1]); //2 sera el numero de hilos
+				rc = pthread_create(&hilo[i - 1], NULL, (void *)ConvertirImagen3, (void *) &argv_convertir[i -1]); //2 sera el numero de hilos
 				if( rc != 0 )
 				{
 					perror("pthread_create: ");
@@ -136,16 +132,14 @@ int main (int argc, char* argv[])
 				break;
 		}
 	}
-	//***************************************************************************************************************************
-	//1 Crear la imágen BMP a partir del arreglo img.pixel[][]
-	//***************************************************************************************************************************
-
-	//Terminar programa normalmente
 	for( i = 0; i < n_hilos; i++ )
 	{
 		pthread_join( hilo[ i ], NULL );
 	}
-	crear_imagen(&img,argv[2]);
+	//***************************************************************************************************************************
+	//1 Crear la imágen BMP a partir del arreglo img.pixel[][]
+	//***************************************************************************************************************************
+	CrearImagen(&img,argv[2]);
 	printf("\nImágen BMP tratada en el archivo: %s\n",argv[2]);
 	pthread_exit(0);
 }
@@ -158,11 +152,11 @@ int main (int argc, char* argv[])
 //Parametros de entrada: Referencia a un BMP (Estructura BMP), Referencia a la cadena ruta char ruta[]=char *ruta
 //Parametro que devuelve: Ninguno
 //*************************************************************************************************************************************************
-void abrir_imagen(BMP *imagen, char *ruta)
+void AbrirImagen(BMP *imagen, char *ruta)
 {
 	FILE *archivo;	//Puntero FILE para el archivo de imágen a abrir
 	int i,j,k;
-        unsigned char P[3];
+  unsigned char P[3];
 
 	//Abrir el archivo de imágen
 	archivo = fopen( ruta, "rb+" );
@@ -204,7 +198,6 @@ void abrir_imagen(BMP *imagen, char *ruta)
 	}
 
 	//Reservar memoria para la matriz de pixels
-
 	imagen->pixel=malloc (imagen->alto* sizeof(char *));
 	for( i=0; i<imagen->alto; i++){
 		imagen->pixel[i]=malloc (imagen->ancho* sizeof(char*));
@@ -217,7 +210,6 @@ void abrir_imagen(BMP *imagen, char *ruta)
 
 	//Pasar la imágen a el arreglo reservado en escala de grises
 	//unsigned char R,B,G;
-
 	for (i=0;i<imagen->alto;i++)
 	{
 		for (j=0;j<imagen->ancho;j++){
@@ -228,21 +220,21 @@ void abrir_imagen(BMP *imagen, char *ruta)
 		}
 	}
 
-
 	//Cerrrar el archivo
 	fclose(archivo);
 }
 
-//****************************************************************************************************************************************************
-//Función para crear una imagen BMP, a partir de la estructura imagen imagen (Arreglo de bytes de alto*ancho  --- 1 Byte por pixel 0-255)
-//Parametros de entrada: Referencia a un BMP (Estructura BMP), Referencia a la cadena ruta char ruta[]=char *ruta
-//Parametro que devuelve: Ninguno
-//****************************************************************************************************************************************************
-void convertir_imagen1(void *argv_convertir)
+/*
+Funcion: ConvertirImagen1
+Parametros de Entrada: un arreglo de la estructura Hilo
+Valor de Salida: no tiene
+Descripcion: calcula la escala de grises de la imagen en la estructura recibida,
+con la formula. esto lo guarda en la misma imagen recibida
+*/
+void ConvertirImagen1(void *argv_convertir)
 {
 	int i,j,k, alto = 0, ancho = 0, n_hilos, hilo_id;
 	BMP *imagen;
-  unsigned char temp;
 
 	imagen = ((Hilo*) (argv_convertir))->img;
 	n_hilos = ((Hilo*) (argv_convertir))->n_hilos;
@@ -261,11 +253,17 @@ void convertir_imagen1(void *argv_convertir)
 	pthread_exit(NULL);
 }
 
-void convertir_imagen2(void *argv_convertir)
+/*
+Funcion: ConvertirImagen2
+Parametros de Entrada: un arreglo de la estructura Hilo
+Valor de Salida: no tiene
+Descripcion: calcula la escala de grises de la imagen en la estructura recibida,
+con el promedio del RGB de cada pixel. esto lo guarda en la misma imagen recibida
+*/
+void ConvertirImagen2(void *argv_convertir)
 {
 	int i,j,k, alto = 0, ancho = 0, n_hilos, hilo_id;
 	BMP *imagen;
-  unsigned char temp;
 
 	imagen = ((Hilo*)(argv_convertir))->img;
 	n_hilos = ((Hilo*)(argv_convertir))->n_hilos;
@@ -274,9 +272,11 @@ void convertir_imagen2(void *argv_convertir)
 		ancho = ( ( imagen->ancho ) / n_hilos ) * hilo_id;
 	else
 		ancho = imagen->ancho;
-	for (i = 0;i<imagen->alto;i++) {
+	for (i = 0;i<imagen->alto;i++)
+	{
 		j = ( ( imagen->ancho ) / n_hilos ) * ( hilo_id - 1 );
-		for (;j<ancho;j++) {
+		for (;j<ancho;j++)
+		{
 			for (k=0;k<3;k++)
         imagen->pixel[i][j][k]=((imagen->pixel[i][j][2]+imagen->pixel[i][j][1] + imagen->pixel[i][j][0]))/3;
 		}
@@ -284,10 +284,16 @@ void convertir_imagen2(void *argv_convertir)
 	pthread_exit(NULL);
 }
 
-void convertir_imagen3(void *argv_convertir){
+/*
+Funcion: ConvertirImagen1
+Parametros de Entrada: un arreglo de la estructura Hilo
+Valor de Salida: no tiene
+Descripcion: calcula el negativo de la imagen en la estructura recibida. esto
+lo guarda en la misma imagen recibida
+*/
+void ConvertirImagen3(void *argv_convertir){
   int i,j,k, alto = 0, ancho = 0, n_hilos, hilo_id;
 	BMP *imagen;
-  unsigned char temp;
 
 	imagen = ((Hilo*) (argv_convertir))->img;
 	n_hilos = ((Hilo*) (argv_convertir))->n_hilos;
@@ -306,11 +312,14 @@ void convertir_imagen3(void *argv_convertir){
 	pthread_exit(NULL);
 }
 
-
-void crear_imagen(BMP *imagen, char ruta[])
+//****************************************************************************************************************************************************
+//Función para crear una imagen BMP, a partir de la estructura imagen imagen (Arreglo de bytes de alto*ancho  --- 1 Byte por pixel 0-255)
+//Parametros de entrada: Referencia a un BMP (Estructura BMP), Referencia a la cadena ruta char ruta[]=char *ruta
+//Parametro que devuelve: Ninguno
+//****************************************************************************************************************************************************
+void CrearImagen(BMP *imagen, char ruta[])
 {
 	FILE *archivo;	//Puntero FILE para el archivo de imágen a abrir
-
 	int i,j,k;
 
 	//Abrir el archivo de imágen
@@ -345,13 +354,11 @@ void crear_imagen(BMP *imagen, char ruta[])
 	{
 		for (j=0;j<imagen->ancho;j++)
 		{
-
-                    for (k=0;k<3;k++)
-		       fwrite(&imagen->pixel[i][j][k],sizeof(char),1, archivo);  //Escribir el Byte Blue del pixel
-
-
+    	for (k=0;k<3;k++)
+		  	fwrite(&imagen->pixel[i][j][k],sizeof(char),1, archivo);  //Escribir el Byte Blue del pixel
 		}
 	}
+
 	//Cerrar el archivo
 	fclose(archivo);
 }
